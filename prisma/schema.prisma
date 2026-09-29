@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Unit {
+  id                 Int           @id @default(autoincrement())
+  nama               String
+  tipe               String        @default("Villa")
+  kapasitas          Int           @default(2)
+  hargaDasarPerMalam Float         @map("harga_dasar_per_malam")
+  deskripsi          String        @default("")
+  bookings           Booking[]
+  blockedDates       BlockedDate[]
+  icalSyncLogs       IcalSyncLog[]
+}
+
+model PriceRule {
+  id     Int     @id @default(autoincrement())
+  tipe   String // WEEKEND | DURATION
+  nama   String
+  config String // JSON
+  aktif  Boolean @default(true)
+}
+
+model Holiday {
+  id             Int    @id @default(autoincrement())
+  nama           String
+  tanggalMulai   String @map("tanggal_mulai") // YYYY-MM-DD
+  tanggalSelesai String @map("tanggal_selesai") // YYYY-MM-DD inklusif
+  multiplier     Float  @default(1)
+}
+
+model Booking {
+  id         Int            @id @default(autoincrement())
+  unitId     Int            @map("unit_id")
+  unit       Unit           @relation(fields: [unitId], references: [id])
+  tamuNama   String         @map("tamu_nama")
+  tamuTelp   String         @map("tamu_telp") @default("")
+  checkin    String // YYYY-MM-DD
+  checkout   String // YYYY-MM-DD (eksklusif, hari pulang)
+  totalHarga Float          @map("total_harga")
+  status     String         @default("confirmed") // confirmed | cancelled
+  dibuatPada String         @map("dibuat_pada") // ISO
+  nights     BookingNight[]
+}
+
+model BookingNight {
+  id        Int     @id @default(autoincrement())
+  bookingId Int     @map("booking_id")
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  tanggal   String // YYYY-MM-DD
+  harga     Float
+}
+
+model BlockedDate {
+  id             Int    @id @default(autoincrement())
+  unitId         Int    @map("unit_id")
+  unit           Unit   @relation(fields: [unitId], references: [id])
+  tanggalMulai   String @map("tanggal_mulai") // YYYY-MM-DD inklusif
+  tanggalSelesai String @map("tanggal_selesai") // YYYY-MM-DD inklusif
+  sumber         String @default("ical") // ical | manual
+  catatan        String @default("")
+}
+
+model IcalSyncLog {
+  id          Int    @id @default(autoincrement())
+  unitId      Int?   @map("unit_id")
+  unit        Unit?  @relation(fields: [unitId], references: [id])
+  arah        String // in | out
+  jumlahEvent Int    @map("jumlah_event")
+  waktu       String // ISO
+  status      String // sukses | gagal
+  catatan     String @default("")
+}
